@@ -1,5 +1,7 @@
 <h1 align=center>
-    <b>nitroforce</b>
+    <img src=icon.webp width=40% alt=Icon></img>
+
+    nitroforce
 </h1>
 
 ## Description
