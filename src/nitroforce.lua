@@ -4,7 +4,7 @@ dofile("functions.lua")
 
 math.randomseed(os.time())
 
-
+local adb_path = nil
 local disclamer = "This program were created for educational purpose ONLY\n" ..
                   "                       The developer is not responsible for any crime commited"
 
@@ -13,37 +13,39 @@ msg("Initialization...")
 msg("Checking adb...")
 
 -- Check adb
-if exists("/usr/bin/adb") then
-    msg("adb found", "OK")
-else
-    msg("adb binary do not exist", "ERROR")
+adb_path = find_adb()
+
+if not adb_path then
+    msg("Adb executable do not exist in PATH")
     return 1
 end
 
+msg("Found adb at \27[1;33m" .. adb_path .. "\27[0m", "OK")
 msg("Checking privileges...")
 
 local username = os.getenv("USER")
-local pipe = io.popen("id -u " .. username)
+local uid = pread("id -u " .. username)
 
-if not pipe then return 1 end
+if not uid then return 1 end
 
-local uid = pipe:read("*n")
-pipe:close()
-
+uid = tonumber(uid)
 
 if uid ~= 0 then
-    msg("User " .. username .. " is not root (has uid " .. tostring(uid) .. "). Please, run script with superuser privileges.", "ERROR")
+    msg("Not enough privileges", "ERROR")
     return 1
 end
 
-msg("Current user: \27[1;33mroot\27[0m (uid \27[1;33m" .. tostring(uid) .. "\27[0m)", "OK")
+
+msg("Current user: \27[1;33m" .. username .. "\27[0m (uid \27[1;33m" .. tostring(uid) .. "\27[0m)", "OK")
 msg("Checking connected devices...")
 
-pipe = io.popen("adb devices")
 
-if not pipe then return 1 end
+local devices = pread("adb devices", true)
 
-local device = getline(pipe, 1):gsub("device", ""):gsub("^%s*(.-)%s*$", "%1") or nil
+if not devices then return 1 end
+
+local device = getline(devices, 1):gsub("device", ""):gsub("^%s*(.-)%s*$", "%1") or nil
+
 
 if not device or device == "" then
     msg("No devices connected", "ERROR")
@@ -51,12 +53,11 @@ if not device or device == "" then
 end
 
 msg("Found connected device \27[1;33m" .. device .. "\27[0m", "OK")
-pipe:close()
-
 msg("Tests passed, initialization complete", "OK")
+
 msg(disclamer, "WARNING")
 
-sleep(2)
+sleep(1)
 msg("Unlocking device...")
 
 os.execute("adb shell input keyevent 82")

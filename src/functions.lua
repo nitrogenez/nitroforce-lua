@@ -30,5 +30,41 @@ function getline(pipe, nline)
 end
 
 function sleep(duration)
-    os.execute("sleep " .. tonumber(duration or 1))
+    local t0 = os.clock()
+
+    while os.clock() - t0 <= duration do end
+end
+
+function string:split(sep)
+    if not sep then sep = "%s" end
+
+    local t = {}
+
+    for str in self:gmatch("([^" .. sep .. "]+)") do
+        table.insert(t, str)
+    end
+    return t
+end
+
+function find_adb()
+    local path = os.getenv("PATH"):split(":")
+
+    for _, p in pairs(path) do
+        if exists(path[_] .. "/adb") then
+            return path[_] .. "/adb"
+        end
+    end
+    return nil
+end
+
+function pread(cmd, return_pipe)
+    local pipe = io.popen(cmd, 'r')
+
+    if not pipe then return nil end
+    if return_pipe then return pipe end
+
+    local o = pipe:read("a")
+    pipe:close()
+
+    return o
 end
