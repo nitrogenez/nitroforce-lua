@@ -1,22 +1,47 @@
-function msg(txt, lvl)
-    if not lvl then
-        txt = "[\27[1;36mINFO\27[0m][\27[1;36mnitroforce\27[0m]: " .. txt
-    else
-        if lvl == "OK" then lvl = "\27[1;32m" .. lvl .. "\27[0m"
-        elseif lvl == "ERROR" then lvl = "\27[1;31m" .. lvl .. "\27[0m"
-        elseif lvl == "WARNING" then lvl = "\27[1;33m" .. lvl .. "\27[0m" end
+C = {
+    rst = "\27[0m",
+    red = "\27[1;31m",
+    grn = "\27[1;32m",
+    ylw = "\27[1;33m",
+    cyn = "\27[1;36m"
+}
 
-        txt = "[" .. lvl .. "]" .. "[\27[1;36mnitroforce\27[0m]: " .. txt
+
+function msg(txt, lvl)
+
+    if not lvl then
+        if not VERBOSE then
+            return
+        end
+        lvl = ("%sLOG%s"):format(C.cyn, C.rst)
+
+    elseif lvl == "VERBOSE" then
+        lvl = ("%sLOG%s"):format(C.cyn, C.rst)
+
+    elseif lvl == "OK" then
+        lvl = ("%s%s%s"):format(C.grn, lvl, C.rst)
+
+    elseif lvl == "WARNING" then
+        lvl = ("%s%s%s"):format(C.ylw, lvl, C.rst)
+
+    elseif lvl == "ERROR" then
+        lvl = ("%s%s%s"):format(C.red, lvl, C.rst)
     end
-    print(txt)
+
+    print(("[%s][%snitroforce%s]: %s"):format(lvl, C.cyn, C.rst, txt))
 end
 
 function exists(path)
-    path = path or "/"
+    if not path then return false end
 
     local f = io.open(path, "rb")
 
-    if f then io.close(f) return true else return false end
+    if f then
+        io.close(f)
+        return true
+    else
+        return false
+    end
 end
 
 function getline(pipe, nline)

