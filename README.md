@@ -1,6 +1,17 @@
-<h1 align=center>
-    <b>nitroforce</b>
-</h1>
+<h2 align=center>
+  <img align=center src=icon.webp width=30% alt=Icon></img>
+</h2>
+
+<h1 align=center><b>NITROFORCE</b></h1>
+
+
+## **DESCRIPTION**
+**NITROFORCE** picks random number from 0..9 4 times and passes generated 4-digit combination into Android smartphone through **adb**.
+
+> **NOTICE**  
+> This software was developed for educational purposes ONLY.  
+Author do not take any responsibility for his software's users or any unfair/malicious usage.
+
 
 ## **PRE-REQUISITES**
   + Install [Lua](http://www.lua.org/) [interpreter](http://www.lua.org/download.html)
