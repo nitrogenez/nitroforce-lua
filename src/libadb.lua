@@ -1,4 +1,30 @@
+-- libadb.lua is an adb wrapper for Lua
+-- Which makes life easier
+
 adb = {}
+
+
+-- Utility functions
+local function read_process_output(process, args)
+    if not args then args = "" end
+
+    local cmd = process
+
+    if not type(args) ~= "table" then
+        for _, arg in ipairs(args) do
+            cmd = cmd .. " " .. arg
+        end
+    end
+
+    local pipe = io.popen(cmd, "r")
+
+    if not pipe then return nil end
+
+    local out = pipe:read("a")
+    pipe:close()
+
+    return out
+end
 
 
 -- instantiates table for adb
@@ -90,5 +116,13 @@ function adb:send_input(type, params)
     elseif type == "keyevent" then
         cmd = cmd .. params
     end
+    os.execute(cmd)
+end
+
+-- Reboots active device into `target`
+function adb:reboot(target)
+    if not target then target = "" end
+
+    local cmd = "adb reboot " .. target
     os.execute(cmd)
 end
